@@ -59,6 +59,19 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   )
 
+  // Create sync run record (must happen before finalize)
+  if (resourceType === "create_sync_run") {
+    const { error } = await supabase.schema("ads").rpc("create_sync_run", {
+      p_sync_id: syncId,
+      p_customer_id: customerId,
+    })
+    if (error) {
+      console.error("create_sync_run failed:", error)
+      return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    }
+    return new Response(JSON.stringify({ created: true }), { status: 200 })
+  }
+
   // Finalize call (deletion detection + cascade refresh)
   if (resourceType === "finalize") {
     const { error } = await supabase.schema("ads").rpc("finalize_sync", {
