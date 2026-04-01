@@ -1,8 +1,8 @@
 -- Realistic scenario: 1 account, 2 campaigns, multiple ads with mixed approval states
 
 -- Account
-INSERT INTO ads.accounts (customer_id, descriptive_name, currency_code, time_zone)
-VALUES ('123-456-7890', 'My Test Account', 'AUD', 'Australia/Sydney');
+INSERT INTO ads.accounts (customer_id, descriptive_name)
+VALUES ('123-456-7890', 'My Test Account');
 
 -- Campaigns
 INSERT INTO ads.campaigns (campaign_id, customer_id, name, status, serving_status, channel_type)
