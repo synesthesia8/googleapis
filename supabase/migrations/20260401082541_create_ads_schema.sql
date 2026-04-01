@@ -9,3 +9,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA ads
   GRANT ALL ON TABLES TO postgres, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA ads
   GRANT SELECT ON TABLES TO anon, authenticated;
+
+-- Grant execute on functions so RPC calls work via PostgREST
+ALTER DEFAULT PRIVILEGES IN SCHEMA ads
+  GRANT EXECUTE ON FUNCTIONS TO postgres, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA ads
+  GRANT EXECUTE ON FUNCTIONS TO anon, authenticated;
