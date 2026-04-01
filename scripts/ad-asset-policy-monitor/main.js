@@ -25,10 +25,7 @@ var QUERIES = {
   accounts: [
     'SELECT',
     '  customer.id,',
-    '  customer.descriptive_name,',
-    '  customer.currency_code,',
-    '  customer.time_zone,',
-    '  customer.status',
+    '  customer.descriptive_name',
     'FROM customer'
   ].join('\n'),
 
@@ -196,12 +193,8 @@ var QUERIES = {
 
 var TRANSFORMERS = {
   accounts: function(row) {
-    var c = row.customer;
     return {
-      descriptiveName: c.descriptiveName || '',
-      currencyCode: c.currencyCode || '',
-      timeZone: c.timeZone || '',
-      status: c.status || ''
+      descriptiveName: row.customer.descriptiveName || ''
     };
   },
 
