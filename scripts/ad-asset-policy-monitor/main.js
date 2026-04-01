@@ -16,6 +16,7 @@
 
 var EDGE_FUNCTION_URL = 'https://makglpeikfgyugngywmc.supabase.co/functions/v1/ingest-gads';
 var INGEST_API_KEY = '2cf86282f6a38fdabadb81274d57b0cfaf4be274029d84cf183e7dd2ae4fb62e';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ha2dscGVpa2ZneXVnbmd5d21jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMzQyMTIsImV4cCI6MjA5MDYxMDIxMn0.icUPQTdBotmg8hMo2yNmZIrOiBhA32R7nZ8PjPyrB8M';
 var BATCH_SIZE = 200;
 
 // ─── GAQL QUERIES (Attributes only — no metrics) ────────────────────────────
@@ -127,6 +128,7 @@ var QUERIES = {
     '  campaign_asset.primary_status_reasons,',
     '  campaign.id,',
     '  campaign.name,',
+    '  campaign.status,',
     '  asset.id,',
     '  asset.name,',
     '  asset.type,',
@@ -149,6 +151,7 @@ var QUERIES = {
     '  ad_group.name,',
     '  campaign.id,',
     '  campaign.name,',
+    '  campaign.status,',
     '  asset.id,',
     '  asset.name,',
     '  asset.type,',
@@ -352,7 +355,10 @@ function generateUuid_() {
 }
 
 function getAuthHeaders_() {
-  return { 'x-api-key': INGEST_API_KEY };
+  return {
+    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+    'x-api-key': INGEST_API_KEY
+  };
 }
 
 function pullResource_(query) {
@@ -413,13 +419,10 @@ function finalize_(syncId, customerId) {
 }
 
 function createSyncRun_(syncId, customerId) {
-  var token = getAuthToken_();
-  // We need to create the sync_run record before finalize can mark it complete
-  // Using the Edge Function with a special resource_type
   var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
     method: 'post',
     contentType: 'application/json',
-    headers: { 'Authorization': 'Bearer ' + token },
+    headers: getAuthHeaders_(),
     muteHttpExceptions: true,
     payload: JSON.stringify({
       sync_id: syncId,
