@@ -24,11 +24,14 @@ BEGIN
     r->>'approvalStatus',
     r->>'reviewStatus',
     r->>'primaryStatus',
-    CASE WHEN r->'primaryStatusReasons' IS NOT NULL
+    CASE WHEN jsonb_typeof(r->'primaryStatusReasons') = 'array'
       THEN ARRAY(SELECT jsonb_array_elements_text(r->'primaryStatusReasons'))
       ELSE NULL
     END,
-    (r->'policyTopics')::jsonb,
+    CASE WHEN jsonb_typeof(r->'policyTopics') IN ('array', 'object')
+      THEN r->'policyTopics'
+      ELSE NULL
+    END,
     (r->>'isEnabled')::boolean,
     r->>'performanceLabel',
     r->>'pinnedField',

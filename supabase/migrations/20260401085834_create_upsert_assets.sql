@@ -27,14 +27,17 @@ BEGIN
     r->>'sitelinkDesc2',
     r->>'calloutText',
     r->>'snippetHeader',
-    CASE WHEN r->'snippetValues' IS NOT NULL
+    CASE WHEN jsonb_typeof(r->'snippetValues') = 'array'
       THEN ARRAY(SELECT jsonb_array_elements_text(r->'snippetValues'))
       ELSE NULL
     END,
     r->>'phoneNumber',
     r->>'globalApproval',
     r->>'globalReview',
-    (r->'globalPolicyTopics')::jsonb,
+    CASE WHEN jsonb_typeof(r->'globalPolicyTopics') IN ('array', 'object')
+      THEN r->'globalPolicyTopics'
+      ELSE NULL
+    END,
     now(),
     p_sync_id::uuid
   FROM jsonb_array_elements(p_rows) AS r

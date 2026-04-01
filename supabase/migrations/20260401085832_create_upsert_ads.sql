@@ -18,8 +18,11 @@ BEGIN
     r->>'approvalStatus',
     r->>'reviewStatus',
     r->>'adStrength',
-    (r->'policyTopics')::jsonb,
-    CASE WHEN r->'finalUrls' IS NOT NULL
+    CASE WHEN jsonb_typeof(r->'policyTopics') IN ('array', 'object')
+      THEN r->'policyTopics'
+      ELSE NULL
+    END,
+    CASE WHEN jsonb_typeof(r->'finalUrls') = 'array'
       THEN ARRAY(SELECT jsonb_array_elements_text(r->'finalUrls'))
       ELSE NULL
     END,
