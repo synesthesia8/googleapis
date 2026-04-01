@@ -15,6 +15,7 @@
 // ─── CONFIG ─────────────────────────────────────────────────────────────────
 
 var EDGE_FUNCTION_URL = 'https://makglpeikfgyugngywmc.supabase.co/functions/v1/ingest-gads';
+var INGEST_API_KEY = '2cf86282f6a38fdabadb81274d57b0cfaf4be274029d84cf183e7dd2ae4fb62e';
 var BATCH_SIZE = 200;
 
 // ─── GAQL QUERIES (Attributes only — no metrics) ────────────────────────────
@@ -350,8 +351,8 @@ function generateUuid_() {
   return Utilities.getUuid();
 }
 
-function getAuthToken_() {
-  return ScriptApp.getOAuthToken();
+function getAuthHeaders_() {
+  return { 'x-api-key': INGEST_API_KEY };
 }
 
 function pullResource_(query) {
@@ -371,13 +372,12 @@ function pullResource_(query) {
 }
 
 function pushToSupabase_(syncId, customerId, resourceType, rows) {
-  var token = getAuthToken_();
   for (var i = 0; i < rows.length; i += BATCH_SIZE) {
     var batch = rows.slice(i, i + BATCH_SIZE);
     var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
       method: 'post',
       contentType: 'application/json',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: getAuthHeaders_(),
       muteHttpExceptions: true,
       payload: JSON.stringify({
         sync_id: syncId,
@@ -395,11 +395,10 @@ function pushToSupabase_(syncId, customerId, resourceType, rows) {
 }
 
 function finalize_(syncId, customerId) {
-  var token = getAuthToken_();
   var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
     method: 'post',
     contentType: 'application/json',
-    headers: { 'Authorization': 'Bearer ' + token },
+    headers: getAuthHeaders_(),
     muteHttpExceptions: true,
     payload: JSON.stringify({
       sync_id: syncId,

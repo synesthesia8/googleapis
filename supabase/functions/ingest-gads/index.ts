@@ -1,8 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-const ALLOWED_EMAILS = (Deno.env.get("ALLOWED_EMAILS") || "").split(",").map((e: string) => e.trim()).filter(Boolean)
-const tokenCache = new Map<string, { email: string; expiresAt: number }>()
+const INGEST_API_KEY = Deno.env.get("INGEST_API_KEY") || ""
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -10,8 +9,10 @@ Deno.serve(async (req) => {
   }
 
   // ── Auth ────────────────────────────────────────────────────
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "")
-  if (!token) return new Response("No token", { status: 401 })
+  const apiKey = req.headers.get("x-api-key")
+  if (INGEST_API_KEY && apiKey !== INGEST_API_KEY) {
+    return new Response("Forbidden", { status: 403 })
+  }
 
   let payload: Record<string, unknown>
   try {
@@ -22,27 +23,6 @@ Deno.serve(async (req) => {
 
   const syncId = payload.sync_id as string
   if (!syncId) return new Response("Missing sync_id", { status: 400 })
-
-  // Check cache first — verify token once per sync session
-  const cached = tokenCache.get(syncId)
-  if (!cached || cached.expiresAt < Date.now()) {
-    // Skip auth entirely if no allowlist configured (local dev only)
-    if (ALLOWED_EMAILS.length === 0) {
-      tokenCache.set(syncId, { email: "local-dev", expiresAt: Date.now() + 3600000 })
-    } else {
-      const googleRes = await fetch(
-        `https://oauth2.googleapis.com/tokeninfo?access_token=${token}`
-      )
-      if (!googleRes.ok) return new Response("Invalid token", { status: 401 })
-
-      const info = await googleRes.json()
-      if (!ALLOWED_EMAILS.includes(info.email)) {
-        return new Response("Forbidden", { status: 403 })
-      }
-
-      tokenCache.set(syncId, { email: info.email, expiresAt: Date.now() + 3600000 })
-    }
-  }
 
   // ── Validate payload ────────────────────────────────────────
   const customerId = payload.customer_id as string
