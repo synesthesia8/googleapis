@@ -247,7 +247,6 @@ SELECT
   campaign.brand_guidelines_enabled,
   campaign.asset_automation_settings
 FROM campaign
-WHERE campaign.status != 'REMOVED'
 ```
 
 ### ad_groups
@@ -291,8 +290,6 @@ SELECT
   campaign.name,
   campaign.status
 FROM ad_group
-WHERE ad_group.status != 'REMOVED'
-  AND campaign.status != 'REMOVED'
 ```
 
 ### ads (ad_group_ad)
@@ -328,8 +325,6 @@ SELECT
   campaign.name,
   campaign.status
 FROM ad_group_ad
-WHERE ad_group_ad.status != 'REMOVED'
-  AND campaign.status != 'REMOVED'
 ```
 
 ### assets
@@ -396,7 +391,6 @@ SELECT
   asset.policy_summary.review_status,
   asset.policy_summary.policy_topic_entries
 FROM customer_asset
-WHERE customer_asset.status != 'REMOVED'
 ```
 
 ### campaign_asset
@@ -422,8 +416,6 @@ SELECT
   asset.policy_summary.review_status,
   asset.policy_summary.policy_topic_entries
 FROM campaign_asset
-WHERE campaign_asset.status != 'REMOVED'
-  AND campaign.status != 'REMOVED'
 ```
 
 ### ad_group_asset
@@ -452,8 +444,6 @@ SELECT
   asset.policy_summary.review_status,
   asset.policy_summary.policy_topic_entries
 FROM ad_group_asset
-WHERE ad_group_asset.status != 'REMOVED'
-  AND campaign.status != 'REMOVED'
 ```
 
 ### ad_group_ad_asset_view
@@ -485,8 +475,6 @@ SELECT
   asset.policy_summary.approval_status,
   asset.policy_summary.review_status
 FROM ad_group_ad_asset_view
-WHERE ad_group_ad.status != 'REMOVED'
-  AND campaign.status != 'REMOVED'
 ```
 
 ## Script Design
