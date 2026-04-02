@@ -317,8 +317,6 @@ SELECT
   ad_group_ad.ad.responsive_search_ad.descriptions,
   ad_group_ad.ad.responsive_search_ad.path1,
   ad_group_ad.ad.responsive_search_ad.path2,
-  ad_group_ad.start_date_time,
-  ad_group_ad.end_date_time,
   ad_group.id,
   ad_group.name,
   campaign.id,
