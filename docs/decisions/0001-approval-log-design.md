@@ -23,7 +23,7 @@ See: `docs/sources/google-ads-approval-change-scenarios.md`
 
 ### One log table for all three entity types
 
-One append-only table: `ads_v2.approval_log`. Each row is a point-in-time event recording a status transition. Rows are never updated or deleted.
+One append-only table: `ads_v2.policy_timeline`. Each row is a point-in-time event recording a status transition. Rows are never updated or deleted.
 
 ### Entity identification
 
@@ -46,7 +46,7 @@ Each log entry freezes the context at the time of the change: asset content, cam
 One AFTER UPDATE trigger per source table. Each trigger:
 1. Extracts the approval status from its specific JSONB path
 2. Compares OLD vs NEW
-3. If different, INSERTs a row into `approval_log` with frozen context
+3. If different, INSERTs a row into `policy_timeline` with frozen context
 
 ### Bootstrap on first sync
 

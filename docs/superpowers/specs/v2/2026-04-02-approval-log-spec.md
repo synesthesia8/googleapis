@@ -6,7 +6,7 @@
 ## Table
 
 ```sql
-CREATE TABLE ads_v2.approval_log (
+CREATE TABLE ads_v2.policy_timeline (
   id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   changed_at      timestamptz NOT NULL DEFAULT now(),
 
@@ -38,11 +38,11 @@ CREATE TABLE ads_v2.approval_log (
 ## Indexes
 
 ```sql
-CREATE INDEX idx_log_entity ON ads_v2.approval_log (entity_key, changed_at);
-CREATE INDEX idx_log_time ON ads_v2.approval_log (changed_at DESC);
-CREATE INDEX idx_log_disapprovals ON ads_v2.approval_log (new_status, changed_at DESC)
+CREATE INDEX idx_log_entity ON ads_v2.policy_timeline (entity_key, changed_at);
+CREATE INDEX idx_log_time ON ads_v2.policy_timeline (changed_at DESC);
+CREATE INDEX idx_log_disapprovals ON ads_v2.policy_timeline (new_status, changed_at DESC)
   WHERE new_status = 'DISAPPROVED';
-CREATE INDEX idx_log_customer ON ads_v2.approval_log (customer_id, changed_at DESC);
+CREATE INDEX idx_log_customer ON ads_v2.policy_timeline (customer_id, changed_at DESC);
 ```
 
 ## Sync Order Dependency
@@ -168,7 +168,7 @@ Three queries, one per entity type:
 #### Bootstrap 1: All asset-in-ad rows
 
 ```sql
-INSERT INTO ads_v2.approval_log (
+INSERT INTO ads_v2.policy_timeline (
   entity_key, entity_type, customer_id, asset_id, ad_id, field_type,
   old_status, new_status, asset_content, asset_type,
   campaign_name, campaign_id, ad_group_name, ad_group_id, policy_topics
@@ -204,7 +204,7 @@ Note: No WHERE filter. Every row gets a baseline entry regardless of whether it 
 #### Bootstrap 2: All extension assets with policySummary
 
 ```sql
-INSERT INTO ads_v2.approval_log (
+INSERT INTO ads_v2.policy_timeline (
   entity_key, entity_type, customer_id, asset_id, ad_id, field_type,
   old_status, new_status, asset_content, asset_type,
   campaign_name, campaign_id, ad_group_name, ad_group_id, policy_topics
@@ -239,7 +239,7 @@ Note: Filtered to assets WITH policySummary. TEXT/IMAGE assets without policySum
 #### Bootstrap 3: All ads
 
 ```sql
-INSERT INTO ads_v2.approval_log (
+INSERT INTO ads_v2.policy_timeline (
   entity_key, entity_type, customer_id, asset_id, ad_id, field_type,
   old_status, new_status, asset_content, asset_type,
   campaign_name, campaign_id, ad_group_name, ad_group_id, policy_topics
@@ -271,7 +271,7 @@ Bootstrap must run exactly once per customer. Track via a `bootstrapped` boolean
 
 ```sql
 -- Only bootstrap if no log entries exist for this customer
-IF NOT EXISTS (SELECT 1 FROM ads_v2.approval_log WHERE customer_id = p_customer_id) THEN
+IF NOT EXISTS (SELECT 1 FROM ads_v2.policy_timeline WHERE customer_id = p_customer_id) THEN
   -- run bootstrap queries
 END IF;
 ```
