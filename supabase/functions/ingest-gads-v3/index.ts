@@ -40,7 +40,11 @@ Deno.serve(async (req) => {
 
   const body = await req.text()
   const valid = await verifyHmac(timestamp, body, signature)
-  if (!valid) return new Response("Invalid signature", { status: 403 })
+  if (!valid) {
+    // Debug: log first 200 chars of body and the lengths
+    console.error(`HMAC mismatch: body length=${body.length}, timestamp=${timestamp}, sig=${signature?.substring(0, 16)}...`)
+    return new Response("Invalid signature", { status: 403 })
+  }
 
   // ── Parse payload ──────────────────────────────────────────
   let payload: Record<string, unknown>

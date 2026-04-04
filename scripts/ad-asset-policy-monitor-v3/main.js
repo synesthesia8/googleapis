@@ -343,9 +343,9 @@ function pushToSupabase_(syncId, customerId, resourceType, rows) {
       rows: batch
     });
     var authHeaders = signRequest_(body);
+    authHeaders['Content-Type'] = 'application/json';
     var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
       method: 'post',
-      contentType: 'application/json',
       headers: authHeaders,
       muteHttpExceptions: true,
       payload: body
@@ -365,9 +365,9 @@ function createSyncRun_(syncId, customerId) {
     rows: []
   });
   var authHeaders = signRequest_(body);
+  authHeaders['Content-Type'] = 'application/json';
   var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
     method: 'post',
-    contentType: 'application/json',
     headers: authHeaders,
     muteHttpExceptions: true,
     payload: body
@@ -385,9 +385,9 @@ function finalize_(syncId, customerId) {
     rows: []
   });
   var authHeaders = signRequest_(body);
+  authHeaders['Content-Type'] = 'application/json';
   var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
     method: 'post',
-    contentType: 'application/json',
     headers: authHeaders,
     muteHttpExceptions: true,
     payload: body
