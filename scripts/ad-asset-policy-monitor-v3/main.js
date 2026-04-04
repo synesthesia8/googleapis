@@ -301,7 +301,7 @@ function generateUuid_() {
   return Utilities.getUuid();
 }
 
-function pullResource_(query) {
+function pullResource_(query, resourceType, errors) {
   var results = [];
   try {
     var search = AdsApp.search(query);
@@ -309,7 +309,13 @@ function pullResource_(query) {
       results.push(search.next());
     }
   } catch (e) {
-    Logger.log('QUERY FAILED: ' + e.message);
+    Logger.log('QUERY FAILED [' + resourceType + ']: ' + e.message);
+    errors.push({
+      resource: resourceType,
+      batch: null,
+      code: null,
+      message: 'QUERY FAILED: ' + e.message.substring(0, 200)
+    });
   }
   if (results.length === 50000) {
     Logger.log('WARNING: Hit 50K row cap — results may be truncated');
@@ -401,19 +407,29 @@ function main() {
   // Register pull as running
   startPull_(pullId, customerId);
 
-  for (var resourceType in QUERIES) {
-    Logger.log('Pulling ' + resourceType + '...');
-    var rows = pullResource_(QUERIES[resourceType]);
-    Logger.log('  → ' + rows.length + ' rows');
+  try {
+    for (var resourceType in QUERIES) {
+      Logger.log('Pulling ' + resourceType + '...');
+      var rows = pullResource_(QUERIES[resourceType], resourceType, errors);
+      Logger.log('  → ' + rows.length + ' rows');
 
-    results[resourceType] = rows.length;
+      results[resourceType] = rows.length;
 
-    if (rows.length > 0) {
-      pushToSupabase_(pullId, customerId, resourceType, rows, errors);
+      if (rows.length > 0) {
+        pushToSupabase_(pullId, customerId, resourceType, rows, errors);
+      }
     }
+  } catch (e) {
+    Logger.log('SCRIPT CRASHED: ' + e.message);
+    errors.push({
+      resource: null,
+      batch: null,
+      code: null,
+      message: 'SCRIPT CRASHED: ' + e.message.substring(0, 200)
+    });
   }
 
-  // Complete pull with results
+  // Complete pull with results — runs even after crash
   completePull_(pullId, customerId, results, errors);
 
   Logger.log('v3 pull ' + pullId + ' complete. Errors: ' + errors.length);
