@@ -1,54 +1,17 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-const HMAC_SECRET = Deno.env.get("HMAC_SECRET") || ""
-
-async function verifyHmac(timestamp: string, body: string, signature: string): Promise<boolean> {
-  if (!HMAC_SECRET) return false
-
-  // Reject if timestamp is more than 5 minutes old
-  const age = Math.abs(Date.now() - parseInt(timestamp))
-  if (isNaN(age) || age > 300000) return false
-
-  // Compute expected signature
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(HMAC_SECRET),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  )
-  const computed = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(timestamp + "." + body)
-  )
-  const expected = [...new Uint8Array(computed)]
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("")
-
-  return expected === signature
-}
+const INGEST_API_KEY = Deno.env.get("INGEST_API_KEY") || ""
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 })
 
-  // ── HMAC Auth ──────────────────────────────────────────────
-  const timestamp = req.headers.get("X-Timestamp")
-  const signature = req.headers.get("X-Signature")
-  if (!timestamp || !signature) return new Response("Missing auth headers", { status: 401 })
+  // ── Auth ───────────────────────────────────────────────────
+  const apiKey = req.headers.get("x-api-key")
+  if (INGEST_API_KEY && apiKey !== INGEST_API_KEY) return new Response("Forbidden", { status: 403 })
 
-  const body = await req.text()
-  const valid = await verifyHmac(timestamp, body, signature)
-  if (!valid) {
-    // Debug: log first 200 chars of body and the lengths
-    console.error(`HMAC mismatch: body length=${body.length}, timestamp=${timestamp}, sig=${signature?.substring(0, 16)}...`)
-    return new Response("Invalid signature", { status: 403 })
-  }
-
-  // ── Parse payload ──────────────────────────────────────────
   let payload: Record<string, unknown>
-  try { payload = JSON.parse(body) }
+  try { payload = await req.json() }
   catch { return new Response("Invalid JSON", { status: 400 }) }
 
   const syncId = payload.sync_id as string

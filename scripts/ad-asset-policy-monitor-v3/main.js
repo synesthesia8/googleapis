@@ -1,9 +1,8 @@
 /**
- * Google Ads Asset Policy Monitor v3 — HMAC Authenticated
+ * Google Ads Asset Policy Monitor v3 — Secured
  *
  * Same as v2 (pulls everything, stores raw, no transformation)
- * but uses HMAC-SHA256 request signing instead of API key auth.
- * No Supabase anon key needed. Secret never transmitted.
+ * with RLS enabled on all tables, verify_jwt disabled, no anon key needed.
  *
  * Setup:
  *   1. Create a new Google Ads Script (Tools > Bulk actions > Scripts)
@@ -15,7 +14,7 @@
 // ─── CONFIG ─────────────────────────────────────────────────────────────────
 
 var EDGE_FUNCTION_URL = 'https://makglpeikfgyugngywmc.supabase.co/functions/v1/ingest-gads-v3';
-var HMAC_SECRET = '2cf86282f6a38fdabadb81274d57b0cfaf4be274029d84cf183e7dd2ae4fb62e';
+var INGEST_API_KEY = '2cf86282f6a38fdabadb81274d57b0cfaf4be274029d84cf183e7dd2ae4fb62e';
 var BATCH_SIZE = 200;
 
 // ─── GAQL QUERIES — PULL EVERYTHING ─────────────────────────────────────────
@@ -296,21 +295,6 @@ var QUERIES = {
   ].join('\n')
 };
 
-// ─── HMAC SIGNING ───────────────────────────────────────────────────────────
-
-function signRequest_(body) {
-  var timestamp = new Date().getTime().toString();
-  var message = timestamp + '.' + body;
-  var signatureBytes = Utilities.computeHmacSha256Signature(message, HMAC_SECRET);
-  var signatureHex = signatureBytes.map(function(b) {
-    return ('0' + (b & 0xFF).toString(16)).slice(-2);
-  }).join('');
-  return {
-    'X-Timestamp': timestamp,
-    'X-Signature': signatureHex
-  };
-}
-
 // ─── HELPERS ────────────────────────────────────────────────────────────────
 
 function generateUuid_() {
@@ -342,11 +326,10 @@ function pushToSupabase_(syncId, customerId, resourceType, rows) {
       resource_type: resourceType,
       rows: batch
     });
-    var authHeaders = signRequest_(body);
-    authHeaders['Content-Type'] = 'application/json';
     var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
       method: 'post',
-      headers: authHeaders,
+      contentType: 'application/json',
+      headers: { 'x-api-key': INGEST_API_KEY },
       muteHttpExceptions: true,
       payload: body
     });
