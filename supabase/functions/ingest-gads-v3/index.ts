@@ -14,12 +14,12 @@ Deno.serve(async (req) => {
   try { payload = await req.json() }
   catch { return new Response("Invalid JSON", { status: 400 }) }
 
-  const syncId = payload.sync_id as string
+  const pullId = payload.pull_id as string
   const customerId = payload.customer_id as string
   const resourceType = payload.resource_type as string
   const rows = payload.rows as unknown[]
 
-  if (!syncId || !customerId || !resourceType) return new Response("Missing required fields", { status: 400 })
+  if (!pullId || !customerId || !resourceType) return new Response("Missing required fields", { status: 400 })
 
   // ── Route to RPC ───────────────────────────────────────────
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
@@ -34,18 +34,27 @@ Deno.serve(async (req) => {
     campaign_assets: "upsert_campaign_assets",
     ad_group_assets: "upsert_ad_group_assets",
     ad_group_ad_asset_view: "upsert_ad_group_ad_asset_view",
-    create_sync_run: "create_sync_run",
-    finalize: "finalize_sync",
+    start_pull: "start_pull",
+    complete_pull: "complete_pull",
   }
 
   const rpcName = rpcMap[resourceType]
   if (!rpcName) return new Response(`Unknown: ${resourceType}`, { status: 400 })
 
-  const params = (resourceType === "create_sync_run")
-    ? { p_sync_id: syncId, p_customer_id: customerId }
-    : (resourceType === "finalize")
-    ? { p_customer_id: customerId, p_sync_id: syncId }
-    : { p_customer_id: customerId, p_sync_id: syncId, p_rows: rows }
+  let params: Record<string, unknown>
+
+  if (resourceType === "start_pull") {
+    params = { p_pull_id: pullId, p_customer_id: customerId }
+  } else if (resourceType === "complete_pull") {
+    params = {
+      p_pull_id: pullId,
+      p_customer_id: customerId,
+      p_results: payload.results || null,
+      p_errors: payload.errors || null,
+    }
+  } else {
+    params = { p_customer_id: customerId, p_sync_id: pullId, p_rows: rows }
+  }
 
   const { error } = await supabase.schema("ads_v2").rpc(rpcName, params)
   if (error) {

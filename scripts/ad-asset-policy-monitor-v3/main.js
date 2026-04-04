@@ -317,88 +317,104 @@ function pullResource_(query) {
   return results;
 }
 
-function pushToSupabase_(syncId, customerId, resourceType, rows) {
+function pushToSupabase_(pullId, customerId, resourceType, rows, errors) {
+  var pushed = 0;
   for (var i = 0; i < rows.length; i += BATCH_SIZE) {
     var batch = rows.slice(i, i + BATCH_SIZE);
-    var body = JSON.stringify({
-      sync_id: syncId,
-      customer_id: customerId,
-      resource_type: resourceType,
-      rows: batch
-    });
     var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
       method: 'post',
       contentType: 'application/json',
       headers: { 'x-api-key': INGEST_API_KEY },
       muteHttpExceptions: true,
-      payload: body
+      payload: JSON.stringify({
+        pull_id: pullId,
+        customer_id: customerId,
+        resource_type: resourceType,
+        rows: batch
+      })
     });
     var code = response.getResponseCode();
     if (code !== 200) {
-      Logger.log('PUSH FAILED [' + resourceType + ' batch ' + Math.floor(i / BATCH_SIZE) + ']: HTTP ' + code + ' — ' + response.getContentText());
+      var msg = response.getContentText();
+      Logger.log('PUSH FAILED [' + resourceType + ' batch ' + Math.floor(i / BATCH_SIZE) + ']: HTTP ' + code + ' — ' + msg);
+      errors.push({
+        resource: resourceType,
+        batch: Math.floor(i / BATCH_SIZE),
+        code: code,
+        message: msg.substring(0, 200)
+      });
+    } else {
+      pushed += batch.length;
     }
   }
+  return pushed;
 }
 
-function createSyncRun_(syncId, customerId) {
+function startPull_(pullId, customerId) {
   var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
     method: 'post',
     contentType: 'application/json',
     headers: { 'x-api-key': INGEST_API_KEY },
     muteHttpExceptions: true,
     payload: JSON.stringify({
-      sync_id: syncId,
+      pull_id: pullId,
       customer_id: customerId,
-      resource_type: 'create_sync_run',
+      resource_type: 'start_pull',
       rows: []
     })
   });
   if (response.getResponseCode() !== 200) {
-    Logger.log('CREATE SYNC RUN FAILED: ' + response.getContentText());
+    Logger.log('START PULL FAILED: ' + response.getContentText());
   }
 }
 
-function finalize_(syncId, customerId) {
+function completePull_(pullId, customerId, results, errors) {
   var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
     method: 'post',
     contentType: 'application/json',
     headers: { 'x-api-key': INGEST_API_KEY },
     muteHttpExceptions: true,
     payload: JSON.stringify({
-      sync_id: syncId,
+      pull_id: pullId,
       customer_id: customerId,
-      resource_type: 'finalize',
+      resource_type: 'complete_pull',
+      results: results,
+      errors: errors.length > 0 ? errors : null,
       rows: []
     })
   });
   if (response.getResponseCode() !== 200) {
-    Logger.log('FINALIZE FAILED: ' + response.getContentText());
+    Logger.log('COMPLETE PULL FAILED: ' + response.getContentText());
   }
 }
 
 // ─── MAIN ───────────────────────────────────────────────────────────────────
 
 function main() {
-  var syncId = generateUuid_();
+  var pullId = generateUuid_();
   var customerId = AdsApp.currentAccount().getCustomerId();
+  var results = {};
+  var errors = [];
 
-  Logger.log('v3 sync ' + syncId + ' for CID ' + customerId);
+  Logger.log('v3 pull ' + pullId + ' for CID ' + customerId);
 
-  var totalRows = 0;
+  // Register pull as running
+  startPull_(pullId, customerId);
 
   for (var resourceType in QUERIES) {
     Logger.log('Pulling ' + resourceType + '...');
     var rows = pullResource_(QUERIES[resourceType]);
     Logger.log('  → ' + rows.length + ' rows');
 
+    results[resourceType] = rows.length;
+
     if (rows.length > 0) {
-      pushToSupabase_(syncId, customerId, resourceType, rows);
-      totalRows += rows.length;
+      pushToSupabase_(pullId, customerId, resourceType, rows, errors);
     }
   }
 
-  createSyncRun_(syncId, customerId);
-  finalize_(syncId, customerId);
+  // Complete pull with results
+  completePull_(pullId, customerId, results, errors);
 
-  Logger.log('v3 sync ' + syncId + ' complete. Total rows: ' + totalRows);
+  Logger.log('v3 pull ' + pullId + ' complete. Errors: ' + errors.length);
 }
