@@ -341,19 +341,17 @@ function pushToSupabase_(syncId, customerId, resourceType, rows) {
 }
 
 function createSyncRun_(syncId, customerId) {
-  var body = JSON.stringify({
-    sync_id: syncId,
-    customer_id: customerId,
-    resource_type: 'create_sync_run',
-    rows: []
-  });
-  var authHeaders = signRequest_(body);
-  authHeaders['Content-Type'] = 'application/json';
   var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
     method: 'post',
-    headers: authHeaders,
+    contentType: 'application/json',
+    headers: { 'x-api-key': INGEST_API_KEY },
     muteHttpExceptions: true,
-    payload: body
+    payload: JSON.stringify({
+      sync_id: syncId,
+      customer_id: customerId,
+      resource_type: 'create_sync_run',
+      rows: []
+    })
   });
   if (response.getResponseCode() !== 200) {
     Logger.log('CREATE SYNC RUN FAILED: ' + response.getContentText());
@@ -361,19 +359,17 @@ function createSyncRun_(syncId, customerId) {
 }
 
 function finalize_(syncId, customerId) {
-  var body = JSON.stringify({
-    sync_id: syncId,
-    customer_id: customerId,
-    resource_type: 'finalize',
-    rows: []
-  });
-  var authHeaders = signRequest_(body);
-  authHeaders['Content-Type'] = 'application/json';
   var response = UrlFetchApp.fetch(EDGE_FUNCTION_URL, {
     method: 'post',
-    headers: authHeaders,
+    contentType: 'application/json',
+    headers: { 'x-api-key': INGEST_API_KEY },
     muteHttpExceptions: true,
-    payload: body
+    payload: JSON.stringify({
+      sync_id: syncId,
+      customer_id: customerId,
+      resource_type: 'finalize',
+      rows: []
+    })
   });
   if (response.getResponseCode() !== 200) {
     Logger.log('FINALIZE FAILED: ' + response.getContentText());
